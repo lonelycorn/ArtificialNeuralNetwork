@@ -33,6 +33,7 @@ class SigmoidAF(ActivationFunctionBaseClass):
 
     def GetDerivative(self, x):
         v = self.GetValue(x)
+        #return np.multiply(v, (1.0 - v))
         return v * (1.0 - v)
 
 class ArctanAF(ActivationFunctionBaseClass):
@@ -43,4 +44,4 @@ class ArctanAF(ActivationFunctionBaseClass):
         return np.arctan(x);
 
     def GetDerivative(self, x):
-        return 1.0 / (1.0 + x * x)
+        return 1.0 / (1.0 + np.multiply(x, x))

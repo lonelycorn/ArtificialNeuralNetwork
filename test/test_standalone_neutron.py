@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
+print(sys.path)
+
 import numpy as np
 import neuron
 import activation_function
@@ -16,5 +21,4 @@ for i in range(500):
 
 print(sn_add.GetOutput(np.array([0.1,0.1]))*2)
 print(sn_add.GetOutput(np.array([0.2,0.1]))*2)
-print("the trained weights: {}, {}".format(sn_add._weight, sn_add._weight_constant))
-
+print("the trained weights: {}, {}".format(sn_add._weight, sn_add._bias))

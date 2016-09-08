@@ -39,20 +39,15 @@ class StandaloneNeuron(NeuronBaseClass):
         NeuronBaseClass.__init__(self)
         self._activation_function = activation_function
         self._learning_coeff = learning_coeff * 1.0
-        self._training_count = 1
         if (supervised):
             self._do_train = self._do_train_supervised
         else:
             self._do_train = self._do_train_unsupervised
         self._weight = np.ones(number_of_inputs) # inputs are 1, x_1, x_2, ..., x_n
-        self._weight_constant = 1.0 # weight for the constant
-
-    @property
-    def _rho(self):
-        return self._learning_coeff / self._training_count
+        self._bias = 1.0 # weight for the constant
 
     def _get_input_sum(self, input):
-        return sum(input * self._weight) + self._weight_constant
+        return sum(input * self._weight) + self._bias
 
     def _do_train_supervised(self, input, expected_output):
         """
@@ -71,8 +66,8 @@ class StandaloneNeuron(NeuronBaseClass):
             output = self.GetOutput(input)
             error = expected_output - output
             af_prime = self._activation_function.GetDerivative(input_sum)
-            self._weight            += 2 * rho * error * af_prime * input
-            self._weight_constant   += 2 * rho * error * af_prime * 1.0 
+            self._weight += 2 * rho * error * af_prime * input
+            self._bias   += 2 * rho * error * af_prime * 1.0 
 
     def _do_train_unsupervised(self, input):
         """
@@ -87,15 +82,20 @@ class StandaloneNeuron(NeuronBaseClass):
         input_sum = self._get_input_sum(input)
         output = self.GetOutput(input)
         af_prime = self._activation_function.GetDerivative(input_sum)
-        self._weight            += 2 * self._rho * output * af_prime * input
-        self._weight_constant   += 2 * self._rho * output * af_prime * 1.0 
+        self._weight += 2 * self._rho * output * af_prime * input
+        self._bias   += 2 * self._rho * output * af_prime * 1.0 
 
     def _do_train(self, *args):
         pass
 
     def Train(self, *args):
+        """
+        Train the neuron
+        === INPUT ===
+        === OUTPUT ===
+        the error after training?
+        """
         self._do_train(*args)
-        self._training_count += 1
 
     def GetOutput(self, input):
         """
