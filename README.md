@@ -1,2 +1,2 @@
-# ArtificialNeuralNetwork
-A toy artificial neural network written in Python.
+# MachineLearning
+Bare-metal machine learning algorithm implementations in Python
