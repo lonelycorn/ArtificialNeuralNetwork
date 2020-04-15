@@ -1,2 +1,6 @@
 *.pyc
 *.pkl
+test_images
+test_labels
+training_images
+training_labels

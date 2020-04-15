@@ -1,0 +1,5 @@
+{
+  "trainer": "test_trainer",
+  "trainer_config": "test_config",
+  "dataset": "MNIST"
+}
