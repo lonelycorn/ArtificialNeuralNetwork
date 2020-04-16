@@ -1,6 +1,19 @@
 import numpy as np
 
-class Sigmoid:
+class Interface:
+    def __init__(self):
+        pass
+
+    def getValue(self, x):
+        raise NotImplementedError("TODO")
+
+    def getDerivative(self, x):
+        raise NotImplementedError("TODO")
+
+    def getValueAndDerivative(self, x):
+        return (self.getValue(x), self.getDerivative(x))
+
+class Sigmoid(Interface):
     def __init__(self):
         pass
 
@@ -11,7 +24,12 @@ class Sigmoid:
         y = self.getValue(x)
         return (1.0 - y) * y
 
-class Tanh:
+    def getValueAndDerivative(self, x):
+        y = self.getValue(x)
+        return (y, (1.0 - y) * y)
+
+
+class Tanh(Interface):
     def __init__(self):
         pass
 
@@ -22,7 +40,12 @@ class Tanh:
         y = self.getValue(x)
         return 1.0 - y * y
 
-class Relu:
+    def getValueAndDerivative(self, x):
+        y = self.getValue(x)
+        return (y, 1.0 - y * y)
+
+
+class Relu(Interface):
     """
     A piecewise linear function that is fast to compute, and fewer vanishing
     gradient problems. The only issue is dead neurons: with random initial weight
@@ -36,10 +59,10 @@ class Relu:
         return np.where(x > 0, x, x * self.mLeakRate)
 
     def getDerivative(self, x):
-        v = np.ones(len(x))
-        return np.where(x > 0, v, v * self.mLeakRate)
+        return np.where(x > 0, 1.0, self.mLeakRate)
 
-class Softplus:
+
+class Softplus(Interface):
     def __init__(self):
         pass
 
@@ -49,7 +72,8 @@ class Softplus:
     def getDerivative(self, x):
         return 1.0 / (1.0 + np.exp(-x))
 
-class Linear:
+
+class Linear(Interface):
     """
     Using this function in a neural net turns it into a standard linear regressor.
     This is introduced for InputNeuron to pass-through the input
@@ -61,7 +85,12 @@ class Linear:
         return x
 
     def getDerivative(self, x):
-        return np.ones(len(x))
+        x = np.asarray(x)
+        if (0 == x.ndim):
+            return 1.0
+        else:
+            return np.ones(len(x))
+
 
 if (__name__ == "__main__"):
     from matplotlib import pyplot as plt
@@ -70,10 +99,9 @@ if (__name__ == "__main__"):
         fig = plt.figure()
 
         x = np.linspace(-2.5, 2.5, 100)
-        #y = np.array([af.getValue(i) for i in x])
-        #dy_over_dx = np.array([af.getDerivative(i) for i in x])
-        y = af.getValue(x)
-        dy_over_dx = af.getDerivative(x)
+        #y = af.getValue(x)
+        #dy_over_dx = af.getDerivative(x)
+        (y, dy_over_dx) = af.getValueAndDerivative(x)
 
         plt.plot(x, y)
         plt.plot(x, dy_over_dx)
