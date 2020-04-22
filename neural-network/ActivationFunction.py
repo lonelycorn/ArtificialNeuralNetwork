@@ -1,5 +1,13 @@
 import numpy as np
 
+def create(name):
+    afs = [Sigmoid, Tanh, Relu, Softplus, Linear]
+    for af in afs:
+        if (af.getName() == name):
+            return af()
+    raise InputError(f"Unsupported activation function: '{name}'")
+
+
 class Interface:
     def __init__(self):
         pass
@@ -13,7 +21,12 @@ class Interface:
     def getValueAndDerivative(self, x):
         return (self.getValue(x), self.getDerivative(x))
 
+
 class Sigmoid(Interface):
+    @staticmethod
+    def getName():
+        return "sigmoid"
+
     def __init__(self):
         pass
 
@@ -30,6 +43,10 @@ class Sigmoid(Interface):
 
 
 class Tanh(Interface):
+    @staticmethod
+    def getName():
+        return "tanh"
+
     def __init__(self):
         pass
 
@@ -52,6 +69,10 @@ class Relu(Interface):
     and fast learning rate, some units may never activate. To mitigate that, a
     new parameter leakRate is introduced, which is slope when x < 0
     """
+    @staticmethod
+    def getName():
+        return "relu"
+
     def __init__(self, leakRate=0.01):
         self.mLeakRate = leakRate
 
@@ -63,6 +84,10 @@ class Relu(Interface):
 
 
 class Softplus(Interface):
+    @staticmethod
+    def getName():
+        return "softplus"
+
     def __init__(self):
         pass
 
@@ -78,6 +103,10 @@ class Linear(Interface):
     Using this function in a neural net turns it into a standard linear regressor.
     This is introduced for InputNeuron to pass-through the input
     """
+    @staticmethod
+    def getName():
+        return "linear"
+
     def __init__(self):
         pass
 
@@ -95,24 +124,23 @@ class Linear(Interface):
 if (__name__ == "__main__"):
     from matplotlib import pyplot as plt
 
-    def doPlot(af, title):
+    def doPlot(name):
+        af = create(name)
         fig = plt.figure()
 
         x = np.linspace(-2.5, 2.5, 100)
-        #y = af.getValue(x)
-        #dy_over_dx = af.getDerivative(x)
         (y, dy_over_dx) = af.getValueAndDerivative(x)
 
         plt.plot(x, y)
         plt.plot(x, dy_over_dx)
 
         plt.legend(["f(x)", "f'(x)"])
-        plt.title(title)
+        plt.title(name)
 
-    doPlot(Sigmoid(), "sigmoid")
-    doPlot(Tanh(), "tanh")
-    doPlot(Relu(), "relu")
-    doPlot(Softplus(), "softplus")
-    doPlot(Linear(), "linear")
+    doPlot(Sigmoid.getName())
+    doPlot(Tanh.getName())
+    doPlot(Relu.getName())
+    doPlot(Softplus.getName())
+    doPlot(Linear.getName())
 
     plt.show()
