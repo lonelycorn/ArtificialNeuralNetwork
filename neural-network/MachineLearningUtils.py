@@ -11,7 +11,7 @@ class Constants:
     FILE_TRAIN_LABELS = "train_labels"
     FILE_TEST_INPUT = "test_input"
     FILE_TEST_LABELS = "test_labels"
-    TEST_TRAINER = "test_trainer"
+    TEST_TRAINER = "trainer_example"
 
 class Utils:
     @staticmethod

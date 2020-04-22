@@ -7,7 +7,6 @@ import sys
 
 from MachineLearningUtils import (
     Constants,
-    JsonError,
     Utils,
 )
 
@@ -50,16 +49,19 @@ class ModelTrainerBase():
             raise ValueError(f"Could not init Dataset {dataset}")
 
     def parseConfig(self, config: str):
+        '''
+        interface
+        '''
         pass
 
     def trainModel(self):
-        self.mTestMatrix = numpy.random.normal(0.0, 1.0, (self.mDimOutput, self.mDimInput))
+        '''
+        interface
+        '''
+        pass
 
     def getResults(self):
-        output = numpy.dot(self.mTestMatrix, self.mTrainInput)
-        trainAccuracy = Utils.compare(Utils.getPredictions(output), self.mTrainOutput)
-
-        output = numpy.dot(self.mTestMatrix, self.mTestInput)
-        testAccuracy = Utils.compare(Utils.getPredictions(output), self.mTestOutput)
-
-        return trainAccuracy, testAccuracy
+        '''
+        interface
+        '''
+        pass

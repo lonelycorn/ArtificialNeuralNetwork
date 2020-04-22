@@ -1,5 +1,5 @@
 {
-  "trainer": "test_trainer",
+  "trainer": "trainer_example",
   "trainer_config": "test_config",
   "dataset": "MNIST"
 }

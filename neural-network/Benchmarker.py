@@ -5,7 +5,7 @@ import logging
 import random
 import sys
 
-from ModelTrainerBase import ModelTrainerBase
+from ModelTrainerExample import ModelTrainerExample
 
 from MachineLearningUtils import (
     Constants,
@@ -151,7 +151,7 @@ class Benchmarker():
 
     def generateTrainer(self):
         if (self.mModelName == Constants.TEST_TRAINER):
-            return ModelTrainerBase(self.mDataset, self.mModelConfig)
+            return ModelTrainerExample(self.mDataset, self.mModelConfig)
         else:
             raise ValueError(f"No existing trainer {self.mModelName}")
 
