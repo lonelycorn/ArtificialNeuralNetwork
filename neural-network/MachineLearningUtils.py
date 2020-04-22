@@ -29,16 +29,16 @@ class Utils:
     def compare(predictions, truths):
         '''
         Compare the matrix of predictions and truths
-        @param predictions: the matirx of prediction labels
-        @param truths: the matrix of truth labels
+        @param predictions: the matirx of prediction labels; each row is a label
+        @param truths: the matrix of truth labels; each row is a label
         @return: accuracy of predictions
         '''
         assert(predictions.shape == truths.shape)
-        n = predictions.shape[1]
         bingo = 0
-        for index in range(0, n):
-            if numpy.array_equal(predictions[:, index], truths[:, index]):
-                bingo = bingo + 1
+        for (p, t) in zip(predictions, truths):
+            if (numpy.array_equal(p, t)):
+                bingo += 1
+        n = len(predictions)
         return 1.0 * bingo / n
 
     @staticmethod
