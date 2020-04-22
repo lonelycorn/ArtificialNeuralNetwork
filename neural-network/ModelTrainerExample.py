@@ -32,20 +32,28 @@ class ModelTrainerExample(ModelTrainerBase):
             assert(self.mNumTestSamples == Utils.bytesToInt(self.mTestOutput, 0))
             self.mDimOutput = 10
 
-            self.mTrainInput = self.mTrainInput[8:].reshape(self.mNumTrainSamples, self.mDimInput).transpose()
+            self.mTrainInput = self.mTrainInput[8:].reshape(self.mNumTrainSamples, self.mDimInput)
             self.mTrainInput = self.mTrainInput / 255.0
-            self.mTestInput = self.mTestInput[8:].reshape(self.mNumTestSamples, self.mDimInput).transpose()
+            self.mTestInput = self.mTestInput[8:].reshape(self.mNumTestSamples, self.mDimInput)
             self.mTestInput = self.mTestInput / 255.0
 
             data = self.mTrainOutput[4:]
-            self.mTrainOutput = numpy.zeros((self.mDimOutput, self.mNumTrainSamples))
-            for index in range(0, self.mNumTrainSamples):
-                self.mTrainOutput[data[index], index] = 1
+            self.mTrainOutput = numpy.zeros((self.mNumTrainSamples, self.mDimOutput))
+            for (sample, d) in zip(self.mTrainOutput, data):
+                sample[d] = 1
 
             data = self.mTestOutput[4:]
-            self.mTestOutput = numpy.zeros((self.mDimOutput, self.mNumTestSamples))
+            self.mTestOutput = numpy.zeros((self.mNumTestSamples, self.mDimOutput))
+            for (sample, d) in zip(self.mTestOutput, data):
+                sample[d] = 1
+            '''
             for index in range(0, self.mNumTestSamples):
                 self.mTestOutput[data[index], index] = 1
+            '''
+            self.mTrainInput.astype('float128')
+            self.mTestInput.astype('float128')
+            self.mTrainOutput.astype('float128')
+            self.mTestOutput.astype('float128')
 
         else:
             raise ValueError(f"Could not init Dataset {dataset}")

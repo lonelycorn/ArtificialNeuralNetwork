@@ -6,6 +6,7 @@ import random
 import sys
 
 from ModelTrainerExample import ModelTrainerExample
+from NeuralNetwork import NeuralNetwork
 
 from MachineLearningUtils import (
     Constants,
@@ -150,8 +151,10 @@ class Benchmarker():
             self.generateMNISTSamples()
 
     def generateTrainer(self):
-        if (self.mModelName == Constants.TEST_TRAINER):
+        if self.mModelName == Constants.TEST_TRAINER:
             return ModelTrainerExample(self.mDataset, self.mModelConfig)
+        elif self.mModelName == Constants.NEURAL_NETWORK_TRAINER:
+            return NeuralNetwork(self.mDataset, self.mModelConfig)
         else:
             raise ValueError(f"No existing trainer {self.mModelName}")
 

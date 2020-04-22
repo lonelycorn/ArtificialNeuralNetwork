@@ -12,6 +12,9 @@ class Constants:
     FILE_TEST_INPUT = "test_input"
     FILE_TEST_LABELS = "test_labels"
     TEST_TRAINER = "trainer_example"
+    NEURAL_NETWORK_TRAINER = "neural-network"
+    SIGMOID = "sigmoid"
+    RELU = "relu"
 
 class Utils:
     @staticmethod
@@ -53,3 +56,23 @@ class Utils:
         for (i, p) in enumerate(possibilities):
             predictions[i, numpy.argmax(p)] = 1
         return predictions
+
+    @staticmethod
+    def generateBatches(size, input, output):
+        '''
+        generate random batches based on the size
+        @param size: size
+        @param input: input samples
+        @param output: output samples
+        @return inputBatches, outputBatches
+        '''
+        inputBatches = []
+        outputBatches = []
+        randomIndex = numpy.arange(len(input))
+        numpy.random.shuffle(randomIndex)
+        input = input[randomIndex]
+        output = output[randomIndex]
+        for index in range(size, len(input) + 1, size):
+            inputBatches.append(input[index-size: index])
+            outputBatches.append(output[index-size: index])
+        return inputBatches, outputBatches
