@@ -10,37 +10,38 @@ def SigmoidActivationFunc(vector):
     return 1 / (1 + numpy.exp(-vector))
 
 class NeuralLayer:
-    def __init__(self, numCurrentNeurons, nextLayer):
-        self.numNeurons = numCurrentNeurons
-        self.nextLayer = nextLayer
+    def __init__(self, numCurrentNeurons, numNextNeurons):
+        self.mNextLayer = None
+        self.mPrevLayer = None
 
-        self.inputValues = None
+        self.mActivations = None
+        self.mSums = None
 
-        self.isOutput = False
-        if nextLayer == None:
+        if numNextNeurons == 0:
             self.isOutput = True
         else:
-            self.bias = numpy.random.normal(0.0, 1.0, (self.nextLayer.numNeurons, 1))
-            self.weightsMatrix = numpy.random.normal(0.0, 1.0, (nextLayer.numNeurons, self.numNeurons))
-            print(f"{nextLayer.numNeurons}, {self.numNeurons}")
+            self.mBias = numpy.random.normal(0.0, 1.0, (numNextNeurons, 1))
+            self.mWeights = numpy.random.normal(0.0, 1.0, (numNextNeurons, numCurrentNeurons))
+            print(f"{numNextNeurons}, {numCurrentNeurons}")
 
-    def FeedForward(self, activationFunc, input = None):
-        assert(self.activationValues is not None)
-        assert(self.nextLayer is not None)
-        self.nextLayer.activationValues = activationFunc(
-            numpy.dot(self.weightsMatrix, self.activationValues) + self.bias
-        )
+    def feedForward(self, activationFunc):
+        assert(self.mActivations is not None)
+        assert(self.mNextLayer is not None)
+        self.mSums = numpy.dot(self.mWeights, self.mActivations) + self.mBias
+        self.mNextLayer.mActivations = activationFunc(self.mSums)
 
-    def GetActivationValues(self):
-        assert(self.activationValues is not None)
-        return self.activationValues
+    def backPropagate(self, activationDerivative):
+        assert(self.mPrevLayer is not None)
+        assert(self.mNextLayer is not None)
+        self.mBiasGradient = activationDerivative(self.mSums) * \
+            numpy.dot(self.mNextLayer.mWeights.transpose(), self.mNextLayer.mBiasGradient)
+        self.mWeightsGradient = numpys.dot(self.mBiasGradient, self.mPrevLayer.mActivations.transpose())
 
 class NeuralNetwork:
     def __init__(self, inputDimension, outputDimension, hiddenLayerDimension):
         self.activationFunc = SigmoidActivationFunc
-        self.outputLayer = NeuralLayer(outputDimension, None)
-        self.hiddenLayers = []
-        self.numHiddenLayers = len(hiddenLayerDimension)
+        self.layers = []
+        self.numLayers = len(hiddenLayerDimension) + 2
 
         if self.numHiddenLayers == 0:
             self.inputLayer = NeuralLayer(inputDimension, self.outputLayer)
@@ -54,12 +55,12 @@ class NeuralNetwork:
         self.activationFunc = func
 
     def GetOutput(self, inputSample):
-        self.inputLayer.activationValues = inputSample
+        self.inputLayer.activations = inputSample
         self.inputLayer.FeedForward(self.activationFunc)
         for layer in self.hiddenLayers:
             layer.FeedForward(self.activationFunc)
-        self.outputLayer.activationValues = numpy.sum(self.outputLayer.activationValues)
-        return self.outputLayer.activationValues
+        self.outputLayer.activations = numpy.sum(self.outputLayer.activations)
+        return self.outputLayer.activations
 
     def TrainBackPropagate(self, standardOutput):
         if self.numHiddenLayers == 0:
@@ -74,9 +75,9 @@ def BytesToInt(data, start):
             (data[start + 2] << 8) + data[start + 3]
 
 if __name__ == '__main__':
-    data = numpy.fromfile("training_images", dtype=numpy.uint8)
+    data = numpy.fromfile("train_input", dtype=numpy.uint8)
     num = BytesToInt(data, 0)
-    dimension = BytesToInt(data, 4)
+    dimension = bytesToInt(data, 4)
     print(f"{num}, {dimension}")
     network = NeuralNetwork(dimension, 10, [20, 25])
     data = data[8:]
