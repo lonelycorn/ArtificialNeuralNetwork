@@ -39,7 +39,7 @@ class Utils:
         for index in range(0, n):
             if numpy.array_equal(predictions[:, index], truths[:, index]):
                 bingo = bingo + 1
-        return bingo / n
+        return 1.0 * bingo / n
 
     @staticmethod
     def getPredictions(possibilities):
@@ -50,7 +50,6 @@ class Utils:
         @return: the prediction labels
         '''
         predictions = numpy.zeros(possibilities.shape)
-        n = possibilities.shape[1]
-        for index in range(0, n):
-            predictions[numpy.argmax(possibilities[:, index]), index] = 1
+        for (i, p) in enumerate(possibilities):
+            predictions[i, numpy.argmax(p)] = 1
         return predictions
