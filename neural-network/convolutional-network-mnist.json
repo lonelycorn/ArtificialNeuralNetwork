@@ -1,0 +1,47 @@
+{
+    "network": {
+        "layers": [
+            {
+                "id": 0,
+                "tag": "input_2d",
+                "inputShape": [28, 28]
+            },
+            {
+                "id": 1,
+                "tag": "simple_convolutional_2d",
+                "activationFunction": "relu",
+                "kernelCount": 4,
+                "kernelSize": [5, 5]
+            },
+            {
+                "id": 2,
+                "tag": "simple_max_pooling_2d",
+                "poolSize": [2, 2]
+            },
+            {
+                "id": 3,
+                "tag": "fully_connected",
+                "neuronCount": 30,
+                "activationFunction": "relu"
+            },
+            {
+                "id": 4,
+                "tag": "fully_connected",
+                "neuronCount": 10,
+                "activationFunction": "relu"
+            }
+        ],
+        "edges": [
+            [0, 1],
+            [1, 2],
+            [2, 3],
+            [3, 4]
+        ],
+        "costFunction": "quadratic"
+    },
+    "hyperparameters": {
+        "learningRate": 0.1,
+        "batchSize": 10,
+        "maxEpoch": 30
+    }
+}

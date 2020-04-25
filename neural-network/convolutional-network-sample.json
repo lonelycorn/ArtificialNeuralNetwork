@@ -1,0 +1,33 @@
+{
+    "network": {
+        "layers": [
+            {
+                "id": 0,
+                "tag": "input_2d",
+                "inputShape": [2, 2]
+            },
+            {
+                "id": 1,
+                "tag": "fully_connected",
+                "activationFunction": "relu",
+                "neuronCount": 7
+            },
+            {
+                "id": 2,
+                "tag": "fully_connected",
+                "activationFunction": "relu",
+                "neuronCount": 4
+            }
+        ],
+        "edges": [
+            [0, 1],
+            [1, 2]
+        ],
+        "costFunction": "quadratic"
+    },
+    "hyperparameters": {
+        "learningRate": 0.01,
+        "batchSize": 10,
+        "maxEpoch": 30
+    }
+}
