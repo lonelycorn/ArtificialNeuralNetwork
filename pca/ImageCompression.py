@@ -1,37 +1,7 @@
 import numpy as np
 
 
-def pca(samples):
-    """
-    :param [in] samples: N-by-M matrix; each row is a M-dimensional sample
-    :return (importance, newBases, newCoords)
-        -   importance: M array; covar / importance of each new basis
-        -   newBases: M-by-M matrix; each col is a new basis
-        -   newCoords: N-by-M matrix; each row is the new coord of the original sample
-                expressed with the new bases
-        NOTE: the original samples could be reconstructed as
-                samples = newCoords * newBases
-    """
-    covar = np.matmul(samples.T, samples)
-
-    U, S, VT = np.linalg.svd(covar)
-    V = VT.T # right-eigenvectors
-
-    #print("covar")
-    #print(covar)
-    #print("S")
-    #print(S)
-    #print("covar * V[:, 0]")
-    #print(np.matmul(covar, V[:, 0]))
-    #print("S[0] * V[:, 0]")
-    #print(S[0] * V[:, 0])
-
-    importance = S
-    newBases = V
-    newCoords = np.matmul(samples, VT)
-
-    return (importance, newBases, newCoords)
-
+import Utils
 
 
 def extractPrincipalComponents(image, blockSize):
@@ -71,7 +41,7 @@ def extractPrincipalComponents(image, blockSize):
     #print(f"std\n{std}")
     #print(f"samples\n{samples}")
 
-    (importance, newBases, newCoords) = pca(samples)
+    (importance, newBases, newCoords) = Utils.pca(samples)
 
     return (importance, newBases, newCoords, avg, std)
 
@@ -128,7 +98,7 @@ def compressImage(image, targetInformationRatio, blockSize=(8, 8)):
     (baseLength, _) = newBases.shape
     (sampleCount, _) = newCoords.shape
     compressedSize = pcCount * baseLength + (pcCount + 2 ) * sampleCount
-    print(f"Size compresson ratio = {compressedSize * 1.0 / rawSize} ({compressedSize} / {rawSize})")
+    print(f"Size compresson ratio = {compressedSize * 1.0 / rawSize} ({compressedSize}/{rawSize})")
 
 
     compressedImage = constructFromPrincipalComponents(
@@ -147,25 +117,12 @@ def compressImage(image, targetInformationRatio, blockSize=(8, 8)):
 
 
 if (__name__ == "__main__"):
-    from matplotlib import image, pyplot
-    import colorsys
+    from matplotlib import pyplot
 
-    # color image: (rows, cols, channels)
-    colorImage = image.imread("lena.png")
-    #print(type(colorImage))
-    #print(colorImage.shape)
-
-    # convert to grayscale ("Y"/luma in YIQ)
-    grayImage = colorsys.rgb_to_yiq(
-            r=colorImage[:, :, 0],
-            g=colorImage[:, :, 1],
-            b=colorImage[:, :, 2])[0]
-    #print(type(grayImage))
-    #print(grayImage.shape)
-
-    targetInformationRatio = 0.95
+    targetInformationRatio = 0.9
     blockSize = (8, 8)
 
+    grayImage = Utils.loadGrayscaleImage("lena.png")
     (compressedGrayImage, diffGrayImage, pcCount, informationRatio) = compressImage(
             grayImage, targetInformationRatio, blockSize)
 
@@ -181,11 +138,7 @@ if (__name__ == "__main__"):
     #pyplot.ylabel("importance (%)")
 
 
-    # show original images
-    #pyplot.figure()
-    #pyplot.imshow(colorImage)
-    #pyplot.title("original color")
-
+    # show original and compressed images
     pyplot.figure()
     pyplot.imshow(grayImage, cmap="gray")
     pyplot.title("original grayscale")
