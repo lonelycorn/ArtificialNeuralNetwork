@@ -15,8 +15,6 @@ from MachineLearningUtils import (
 )
 from ModelTrainerExample import ModelTrainerExample
 
-def SigmoidActivationFunc(vector):
-    return 1 / (1 + numpy.exp(-vector))
 
 class NeuralLayer:
     def __init__(self, numCurrentNeurons, numNextNeurons = 0):
@@ -31,8 +29,9 @@ class NeuralLayer:
         if numNextNeurons == 0:
             self.isOutput = True
         else:
-            self.mBias = numpy.random.normal(0.0, 1.0, (1, numNextNeurons))
-            self.mWeights = numpy.random.normal(0.0, 1.0, (numCurrentNeurons, numNextNeurons))
+            self.mBias = numpy.zeros((1, numNextNeurons))
+            std = numpy.sqrt(2.0 / numCurrentNeurons)
+            self.mWeights = numpy.random.normal(0.0, std, (numCurrentNeurons, numNextNeurons))
             print(f"{numNextNeurons}, {numCurrentNeurons}")
 
     def feedForward(self, activationFunc):
@@ -40,6 +39,8 @@ class NeuralLayer:
         assert(self.mNextLayer is not None)
         self.mSums = numpy.dot(self.mActivations, self.mWeights) + self.mBias
         self.mNextLayer.mActivations = activationFunc.getValue(self.mSums)
+        # print(f"feedforward: bias {self.mBias.shape}, weights {self.mWeights.shape}")
+        # print(f"feedforward: activations {self.mActivations.shape}, sums {self.mSums.shape}")
 
     def backPropagate(self, activationFunc):
         assert(self.mNextLayer is not None)
@@ -54,14 +55,17 @@ class NeuralLayer:
             numpy.dot(self.mActivations.transpose(), self.mBiasGradient)
 
     def update(self, learningRate):
+        # print(f"update(): mBiasGradient shape {self.mBiasGradient.shape}, sum {numpy.sum(self.mBiasGradient, axis=0).shape}")
+        # print(f"update(): mWeightsGradient shape {self.mWeightsGradient.shape}, sum {numpy.sum(self.mWeightsGradient, axis=0).shape}")
         self.mBias = self.mBias - numpy.sum(self.mBiasGradient, axis=0) * learningRate
-        self.mWeights = self.mWeights - numpy.sum(self.mWeightsGradient, axis=0) * learningRate
+        self.mWeights = self.mWeights - self.mWeightsGradient * learningRate
+        # self.mWeights = self.mWeights - numpy.sum(self.mWeightsGradient, axis=0) * learningRate
 
 class NeuralNetwork(ModelTrainerExample):
     JSON_EPOCHES_KEY = "epoches"
     JSON_HIDDEN_LAYERS_KEY = "hidden_layers"
     JSON_LEARNING_RATE_KEY = "learning_rate"
-    JSON_BATCH_PERCENTAGE_KEY = "batch_percentage"
+    JSON_BATCH_SIZE_KEY = "batch_size"
     JSON_ACTIVATION_FUNCTION_KEY = "activation_function"
 
     def initLayers(self, sizes):
@@ -111,7 +115,7 @@ class NeuralNetwork(ModelTrainerExample):
         for (input, output) in zip(inputBatches, outputBatches):
             self.feedForward(input)
             self.backPropagate(output)
-            rate = self.mLearningRate / len(inputBatches)
+            rate = self.mLearningRate / self.mBatchSize
             self.updateNetwork(rate)
             '''
             for (biasDelta, weightsDelta, layer) in zip(biasGradient, weightsGradient, self.mLayers):
@@ -140,10 +144,10 @@ class NeuralNetwork(ModelTrainerExample):
             else:
                 self.mLearningRate = 0.1
 
-            if self.JSON_BATCH_PERCENTAGE_KEY in configs:
-                self.mBatchSize = int(configs[self.JSON_BATCH_PERCENTAGE_KEY] * 0.01 * self.mNumTrainSamples)
+            if self.JSON_BATCH_SIZE_KEY in configs:
+                self.mBatchSize = configs[self.JSON_BATCH_SIZE_KEY]
             else:
-                self.mBatchSize = self.mNumTrainSamples
+                self.mBatchSize = 10
 
             if self.JSON_ACTIVATION_FUNCTION_KEY in configs:
                 activation = configs[self.JSON_ACTIVATION_FUNCTION_KEY]
@@ -188,18 +192,3 @@ class NeuralNetwork(ModelTrainerExample):
         output = self.feedForward(self.mTestInput)
         testAccuracy = Utils.compare(Utils.getPredictions(output), self.mTestOutput)
         return trainAccuracy, testAccuracy
-
-if __name__ == '__main__':
-    data = numpy.fromfile("train_input", dtype=numpy.uint8)
-    num = BytesToInt(data, 0)
-    dimension = bytesToInt(data, 4)
-    print(f"{num}, {dimension}")
-    network = NeuralNetwork(dimension, 10, [100, 25])
-    data = data[8:]
-    data.shape = (num, dimension)
-
-    sample = data[0:1,:]
-    print(sample.shape)
-    sample = sample.T / 255.0
-    print(sample.shape)
-    print(network.GetOutput(sample))

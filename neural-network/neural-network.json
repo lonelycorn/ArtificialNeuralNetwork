@@ -1,7 +1,7 @@
 {
-    "epoches": 200,
-    "hidden_layers": [25, 20],
-    "learning_rate": 0.001,
-    "batch_percentage": 20,
+    "epoches": 100,
+    "hidden_layers": [50, 20],
+    "learning_rate": 0.1,
+    "batch_size": 10,
     "activation_function": "sigmoid"
 }
