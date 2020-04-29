@@ -6,11 +6,14 @@ import Utils
 
 def extractPrincipalComponents(image, blockSize):
     """
-    :param [in] img:    2D numpy array; the grayscale image
+    :param [in] img:    2D (grayscale) or 3D (rows, cols, channels) numpy array
     :param [in] blockSize: 2-tuple; the shape of each block
     :return (importance, newBases, newCoords, dimensionAvg, dimensionStd)
     """
-    (imageRows, imageCols) = image.shape
+    if (len(image.shape) == 2):
+        image = image.reshape((image.shape[0], image.shape[1], 1))
+
+    (imageRows, imageCols, imageChns) = image.shape
     (blockRows, blockCols) = blockSize
 
     # sanity check
@@ -18,16 +21,16 @@ def extractPrincipalComponents(image, blockSize):
         (imageRows % blockRows > 0) or (imageCols % blockCols > 0)):
         raise ValueError("Improper image size / block size")
 
-    # each sample is a flattened block
-    sampleCount = int(imageRows / blockRows) * int(imageCols / blockCols)
-    sampleLength = blockRows * blockCols
+    # each sample is a flattened block (blockRows, blockCols, imageChns)
+    sampleCount = int(imageRows / blockRows) * int(imageCols / blockCols) * 1
+    sampleLength = blockRows * blockCols * imageChns
 
     # each row is a raw sample
     raw = np.zeros((sampleCount, sampleLength))
     N = 0
     for r in range(0, imageRows, blockRows):
         for c in range(0, imageCols, blockCols):
-            raw[N, :] = image[r : r + blockRows, c : c + blockCols].flatten()
+            raw[N, :] = image[r : r + blockRows, c : c + blockCols, :].flatten()
             N += 1
 
     # normalization by dimension
@@ -55,11 +58,15 @@ def extractPrincipalComponents(image, blockSize):
 
 
 
-def constructFromPrincipalComponents(pcCount, newBases, newCoords, dimensionAvg, dimensionStd, imageSize, blockSize):
+def constructFromPrincipalComponents(pcCount, newBases, newCoords, dimensionAvg, dimensionStd, imageShape, blockSize):
     """
-    :return a 2D numpy array; the reconstructed image
+    :return a numpy array of imageShape; the reconstructed image
     """
-    (imageRows, imageCols) = imageSize
+    if (len(imageShape) == 2):
+        (imageRows, imageCols) = imageShape
+        imageChns = 1
+    else:
+        (imageRows, imageCols, imageChns) = imageShape
     (blockRows, blockCols) = blockSize
 
     # sanity check
@@ -68,17 +75,20 @@ def constructFromPrincipalComponents(pcCount, newBases, newCoords, dimensionAvg,
         raise ValueError("Improper image size / block size")
 
     # reduced-dimension bases
-    V = newBases[:, 0:pcCount + 1] # (coordLength, pcCount)
     samples = np.matmul(newCoords[:, 0 : pcCount + 1], newBases[:, 0 : pcCount + 1].T)
 
+    # de-normalize
     samples = samples * dimensionStd + dimensionAvg
 
-    image = np.zeros(imageSize)
+    image = np.zeros((imageRows, imageCols, imageChns))
     N = 0
     for r in range(0, imageRows, blockRows):
         for c in range(0, imageCols, blockCols):
-            image[r : r + blockRows, c : c + blockCols] = samples[N, :].reshape(blockSize)
+            image[r : r + blockRows, c : c + blockCols, :] = samples[N, :].reshape((blockRows, blockCols, imageChns))
             N += 1
+
+    if (imageChns == 1):
+        image = image.reshape((imageRows, imageCols))
 
     return image
 
@@ -101,7 +111,7 @@ def compressImage(image, targetInformationRatio, blockSize=(8, 8)):
     print(f"Using {pcCount} principal components")
     print(f"Information ratio = {informationRatio}")
 
-    # 1 byte for each pixel
+    # 1 byte for each channel at every pixel
     rawSize = np.prod(image.shape)
     # for each sample: pcCount bytes for new coord;
     # for each principle component: baseLength bytes
@@ -126,41 +136,61 @@ def compressImage(image, targetInformationRatio, blockSize=(8, 8)):
     return (compressedImage, diffImage, pcCount, informationRatio)
 
 
-
 if (__name__ == "__main__"):
-    from matplotlib import pyplot
+    from matplotlib import pyplot, image
 
-    targetInformationRatio = 0.9
+    tryColorImage = True
+    targetInformationRatio = 0.95
     blockSize = (8, 8)
 
-    grayImage = Utils.loadGrayscaleImage("lena.png")
-    (compressedGrayImage, diffGrayImage, pcCount, informationRatio) = compressImage(
-            grayImage, targetInformationRatio, blockSize)
+    if (tryColorImage):
+        colorImage = image.imread("lena.png")
+        (compressedColorImage, diffColorImage, pcCount, informationRatio) = compressImage(
+                colorImage, targetInformationRatio, blockSize)
+
+        # show original and compressed images
+        pyplot.figure()
+        pyplot.imshow(colorImage)
+        pyplot.title("original color")
+
+        description = f"{pcCount}/{np.prod(blockSize)} components"
+        pyplot.figure()
+        pyplot.imshow(np.abs(compressedColorImage)) # FIXME: some values are outside [0, 1]
+        pyplot.title(f"compressed color ({description})")
+
+        pyplot.figure()
+        pyplot.imshow(np.abs(diffColorImage)) # FIXME: some values are outside [0, 1]
+        pyplot.title(f"diff color ({description})")
+
+    else:
+        grayImage = Utils.loadGrayscaleImage("lena.png")
+        (compressedGrayImage, diffGrayImage, pcCount, informationRatio) = compressImage(
+                grayImage, targetInformationRatio, blockSize)
 
 
-    # show importance of each principal components
-    #(importance, _, _, _, _) = extractPrincipalComponents(grayImage, blockSize)
-    #pyplot.figure()
-    #pyplot.plot(importance / np.sum(importance) * 100, "rx-")
-    #pyplot.plot(np.cumsum(importance) / np.sum(importance) * 100, "k^-")
-    #pyplot.legend(["individual", "cumulative"])
-    #pyplot.title("Importance of principal components")
-    #pyplot.xlabel("principle component ID")
-    #pyplot.ylabel("importance (%)")
+        # show importance of each principal components
+        #(importance, _, _, _, _) = extractPrincipalComponents(grayImage, blockSize)
+        #pyplot.figure()
+        #pyplot.plot(importance / np.sum(importance) * 100, "rx-")
+        #pyplot.plot(np.cumsum(importance) / np.sum(importance) * 100, "k^-")
+        #pyplot.legend(["individual", "cumulative"])
+        #pyplot.title("Importance of principal components")
+        #pyplot.xlabel("principle component ID")
+        #pyplot.ylabel("importance (%)")
 
 
-    # show original and compressed images
-    pyplot.figure()
-    pyplot.imshow(grayImage, cmap="gray")
-    pyplot.title("original grayscale")
+        # show original and compressed images
+        pyplot.figure()
+        pyplot.imshow(grayImage, cmap="gray")
+        pyplot.title("original grayscale")
 
-    description = f"{pcCount}/{np.prod(blockSize)} components"
-    pyplot.figure()
-    pyplot.imshow(compressedGrayImage, cmap="gray")
-    pyplot.title(f"compressed grayscale ({description})")
+        description = f"{pcCount}/{np.prod(blockSize)} components"
+        pyplot.figure()
+        pyplot.imshow(compressedGrayImage, cmap="gray")
+        pyplot.title(f"compressed grayscale ({description})")
 
-    pyplot.figure()
-    pyplot.imshow(diffGrayImage, cmap="gray")
-    pyplot.title(f"diff grayscale ({description})")
+        pyplot.figure()
+        pyplot.imshow(diffGrayImage, cmap="gray")
+        pyplot.title(f"diff grayscale ({description})")
 
     pyplot.show()
