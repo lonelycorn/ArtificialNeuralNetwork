@@ -8,6 +8,7 @@ def extractPrincipalComponents(image, blockSize):
     """
     :param [in] img:    2D numpy array; the grayscale image
     :param [in] blockSize: 2-tuple; the shape of each block
+    :return (importance, newBases, newCoords, dimensionAvg, dimensionStd)
     """
     (imageRows, imageCols) = image.shape
     (blockRows, blockCols) = blockSize
@@ -29,24 +30,32 @@ def extractPrincipalComponents(image, blockSize):
             raw[N, :] = image[r : r + blockRows, c : c + blockCols].flatten()
             N += 1
 
-    # normalization
-    avg = np.mean(raw, axis=1) # mean of each sample
-    std = np.std(raw, axis=1) # std dev of each sample
+    # normalization by dimension
+    dimensionAvg = np.mean(raw, axis=0)
+    dimensionStd = np.std(raw, axis=0)
 
     # NOTE: numpy broadcasting only works if the last dimension matches
-    samples = ((raw.T - avg.T) / std.T).T
-
-    #print(f"raw\n{raw}")
-    #print(f"avg\n{avg}")
-    #print(f"std\n{std}")
-    #print(f"samples\n{samples}")
+    samples = (raw - dimensionAvg) / dimensionStd
 
     (importance, newBases, newCoords) = Utils.pca(samples)
 
-    return (importance, newBases, newCoords, avg, std)
+    # for visualizing the principal
+    #from matplotlib import pyplot
+    #pyplot.figure()
+    #pyplot.imshow(newBases[:, 0].reshape(blockSize), cmap="gray")
+    #pyplot.title("first principal component")
+    #pyplot.figure()
+    #pyplot.imshow(newBases[:, 1].reshape(blockSize), cmap="gray")
+    #pyplot.title("second principal component")
+    #pyplot.figure()
+    #pyplot.imshow(newBases[:, 2].reshape(blockSize), cmap="gray")
+    #pyplot.title("thrid principal component")
+
+    return (importance, newBases, newCoords, dimensionAvg, dimensionStd)
 
 
-def constructFromPrincipalComponents(pcCount, newBases, newCoords, blockAvg, blockStd, imageSize, blockSize):
+
+def constructFromPrincipalComponents(pcCount, newBases, newCoords, dimensionAvg, dimensionStd, imageSize, blockSize):
     """
     :return a 2D numpy array; the reconstructed image
     """
@@ -58,11 +67,11 @@ def constructFromPrincipalComponents(pcCount, newBases, newCoords, blockAvg, blo
         (imageRows % blockRows > 0) or (imageCols % blockCols > 0)):
         raise ValueError("Improper image size / block size")
 
-    samples = np.matmul(newCoords[:, 0 : pcCount], newBases[0 : pcCount, :])
-    #print(f"recovered normalized samples.shape = {samples.shape}")
+    # reduced-dimension bases
+    V = newBases[:, 0:pcCount + 1] # (coordLength, pcCount)
+    samples = np.matmul(newCoords[:, 0 : pcCount + 1], newBases[:, 0 : pcCount + 1].T)
 
-    samples = (samples.T * blockStd.T + blockAvg.T).T
-    #print(f"recovered raw samples.shape = {samples.shape}")
+    samples = samples * dimensionStd + dimensionAvg
 
     image = np.zeros(imageSize)
     N = 0
@@ -81,7 +90,7 @@ def compressImage(image, targetInformationRatio, blockSize=(8, 8)):
     if ((targetInformationRatio <= 0) or (targetInformationRatio > 1.0)):
         raise ValueError("Unrealistic target information ratio")
 
-    (importance, newBases, newCoords, blockAvg, blockStd) = \
+    (importance, newBases, newCoords, dimensionAvg, dimensionStd) = \
             extractPrincipalComponents(image, blockSize)
     pcCount = 1
     sumImportance = np.sum(importance)
@@ -94,10 +103,12 @@ def compressImage(image, targetInformationRatio, blockSize=(8, 8)):
 
     # 1 byte for each pixel
     rawSize = np.prod(image.shape)
-    # for each sample: pcCount bytes for new coord, 2 bytes for avg and std
-    (baseLength, _) = newBases.shape
+    # for each sample: pcCount bytes for new coord;
+    # for each principle component: baseLength bytes
+    # for each dimension: 2 bytes for avg and std
+    (baseLength, baseCount) = newBases.shape
     (sampleCount, _) = newCoords.shape
-    compressedSize = pcCount * baseLength + (pcCount + 2 ) * sampleCount
+    compressedSize = pcCount * baseLength + pcCount * sampleCount + 2 * baseCount
     print(f"Size compresson ratio = {compressedSize * 1.0 / rawSize} ({compressedSize}/{rawSize})")
 
 
@@ -105,8 +116,8 @@ def compressImage(image, targetInformationRatio, blockSize=(8, 8)):
             pcCount,
             newBases,
             newCoords,
-            blockAvg,
-            blockStd,
+            dimensionAvg,
+            dimensionStd,
             image.shape,
             blockSize)
 
@@ -143,12 +154,13 @@ if (__name__ == "__main__"):
     pyplot.imshow(grayImage, cmap="gray")
     pyplot.title("original grayscale")
 
+    description = f"{pcCount}/{np.prod(blockSize)} components"
     pyplot.figure()
     pyplot.imshow(compressedGrayImage, cmap="gray")
-    pyplot.title(f"compressed grayscale ({pcCount} principal components)")
+    pyplot.title(f"compressed grayscale ({description})")
 
     pyplot.figure()
     pyplot.imshow(diffGrayImage, cmap="gray")
-    pyplot.title(f"diff grayscale ({pcCount} principal components)")
+    pyplot.title(f"diff grayscale ({description})")
 
     pyplot.show()
