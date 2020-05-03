@@ -1,0 +1,54 @@
+{
+    "layers": [
+        {
+            "type": "Conv2D",
+            "input_shape": [1, 28, 28],
+            "filters": 4,
+            "kernel_size": 5,
+            "strides": 1,
+            "padding": "valid",
+            "data_format": "channels_first",
+            "activation": "relu",
+            "use_bias": 1,
+            "kernel_initializer": "he_normal",
+            "bias_initializer": "zeros"
+        },
+        {
+            "type": "MaxPooling2D",
+            "pool_size": 2,
+            "strides": 2,
+            "padding": "valid",
+            "data_format": "channels_first"
+        },
+        {
+            "type": "Flatten",
+            "data_format": "channels_first"
+        },
+        {
+            "type": "Dense",
+            "units": 30,
+            "activation": "relu",
+            "use_bias": "1",
+            "kernel_initializer": "he_normal",
+            "bias_initializer": "zeros"
+        },
+        {
+            "type": "Dense",
+            "units": 10,
+            "activation": "relu",
+            "use_bias": "1",
+            "kernel_initializer": "he_normal",
+            "bias_initializer": "zeros"
+        }
+    ],
+    "compile_args": {
+        "optimizer": "adadelta",
+        "loss": "mean_squared_error",
+        "metrics": ["accuracy"]
+    },
+    "fit_args": {
+        "batch_size": 10,
+        "epochs": 30,
+        "verbose": 2
+    }
+}
