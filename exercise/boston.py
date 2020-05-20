@@ -70,12 +70,12 @@ def trainNeuralNet(X, Y):
         bias_initializer="zeros"
     ))
 
-    model.compile(optimizer="adadelta",loss="mean_squared_error", metrics=["accuracy"])
+    model.compile(optimizer="adadelta",loss="mean_squared_error", metrics=["mean_squared_error"])
 
     model.fit(X, Y, batch_size=10, epochs=100, verbose=0)
 
     def predict(X):
-        return model.predict(X)
+        return model.predict(X).flatten()
 
     return predict
 
