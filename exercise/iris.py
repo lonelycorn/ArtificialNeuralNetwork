@@ -122,5 +122,5 @@ if (__name__ == "__main__"):
     X = iris.data
     Y = iris.target
 
-    utils.trainAndTest(X, Y, algorithms[args.algorithm], args.useKernels, args.normalizeInput)
+    utils.trainAndTestClassifier(X, Y, algorithms[args.algorithm], args.useKernels, args.normalizeInput)
 

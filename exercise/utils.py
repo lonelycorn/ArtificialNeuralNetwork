@@ -48,13 +48,21 @@ def kernelize(raw):
     return output
 
 
-def trainAndTest(X, Y, algorithm, useKernels, normalizeInput):
+def trainAndTestClassifier(X, Y, algorithm, useKernels, normalizeInput):
 
     testCount = 10
     bingo = np.zeros(testCount, dtype=np.int)
 
+    if (useKernels and normalizeInput):
+        label = "kernelized & normalized"
+    elif (useKernels):
+        label = "kernelized"
+    elif (normalizeInput):
+        label = "normalized"
+    else:
+        label = "raw"
     for i in range(testCount):
-        print("[%d/%d] Training using %s samples" % (i + 1, testCount, ["raw", "kernelized"][useKernels]))
+        print("[%d/%d] Training using %s samples" % (i + 1, testCount, raw))
         (trainingX, testingX, trainingY, testingY) = model_selection.train_test_split(X, Y, test_size=0.3)
         if (useKernels):
             trainingX = kernelize(trainingX)
@@ -78,6 +86,42 @@ def trainAndTest(X, Y, algorithm, useKernels, normalizeInput):
     avg = np.sum(bingo) / (testCount * N) * 100
     std = np.std(bingo / N) * 100
     print(f"Accuracy avg = {avg:.2f}%, std = {std:.2f}%")
+
+
+def trainAndTestRegressor(X, Y, algorithm, useKernels, normalizeInput):
+
+    testCount = 10
+    rmse = np.zeros(testCount, dtype=np.float)
+
+    if (useKernels and normalizeInput):
+        label = "kernelized & normalized"
+    elif (useKernels):
+        label = "kernelized"
+    elif (normalizeInput):
+        label = "normalized"
+    else:
+        label = "raw"
+    for i in range(testCount):
+        print("[%d/%d] Training using %s samples" % (i + 1, testCount, label))
+        (trainingX, testingX, trainingY, testingY) = model_selection.train_test_split(X, Y, test_size=0.3)
+        if (useKernels):
+            trainingX = kernelize(trainingX)
+            testingX = kernelize(testingX)
+
+        if (normalizeInput):
+            (trainingX, _, _) = normalize(trainingX)
+            (testingX, _, _) = normalize(testingX)
+
+        predictor = algorithm(trainingX, trainingY)
+        predictions = predictor(testingX)
+
+        rmse[i] = np.sqrt(np.mean((predictions - testingY) ** 2))
+
+        print(f"\tRMSE = {rmse[i] :.2f}")
+
+    avg = np.sum(rmse) / testCount
+    std = np.std(rmse)
+    print(f"RMSE avg = {avg:.2f}, std = {std:.2f}")
 
 
 if (__name__ == "__main__"):
