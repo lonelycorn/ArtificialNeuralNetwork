@@ -6,7 +6,7 @@ def decompose(X_raw, Y_raw, M_star):
     """
     :param [in] X_raw: M-by-N matrix where each COL is a sample input
     :param [in] Y_raw: L-by-N matrix where each COL is a sample output
-    :return (v, p, q, C_YX_history, C_XX_history)
+    :return (v, p, q, C_YY_history, C_XX_history)
     """
     assert(X_raw.shape[1] == Y_raw.shape[1])
 
@@ -22,6 +22,8 @@ def decompose(X_raw, Y_raw, M_star):
     C_YX = np.matmul(Y, X.T) / (N - 1)
     # M-by-M
     C_XX = np.matmul(X, X.T) / (N - 1)
+    # L-by-L
+    C_YY = np.matmul(Y, Y.T) / (N - 1)
 
     # each col is a new basis of the input
     v = np.zeros((M, M_star))
@@ -31,10 +33,12 @@ def decompose(X_raw, Y_raw, M_star):
     p = np.zeros((M, M_star))
 
     # residual information after using first [0..k] latent variables
-    C_YX_history = np.zeros(M_star)
+    C_YY_history = np.zeros(M_star)
     C_XX_history = np.zeros(M_star)
-    C_YX_init_trace = np.trace(C_YX)
+    C_YY_init_trace = np.trace(C_YY)
     C_XX_init_trace = np.trace(C_XX)
+    #print(f"initial tr(C_YY) = {C_YY_init_trace}")
+    #print(f"initial tr(C_XX) = {C_XX_init_trace}")
 
     # deflated samples
     # NOTE: we're not making copies because PLSR only needs C_XX and C_YX
@@ -86,23 +90,28 @@ def decompose(X_raw, Y_raw, M_star):
         #print(f"p0 =\n{p0}")
         #print(f"q0 =\n{q0}")
         #print(f"v0 =\n{v0}")
-        C_YX = C_YX - np.matmul(np.matmul(q0, v0.T), C_XX)
-        C_XX = C_XX - np.matmul(np.matmul(p0, v0.T), C_XX)
-
-        C_YX_history[i] = np.trace(C_YX) / C_YX_init_trace
-        C_XX_history[i] = np.trace(C_XX) / C_XX_init_trace
 
         X1 = X1 - np.matmul(p0, z0)
         Y1 = Y1 - np.matmul(q0, z0)
+        """
+        C_YX = C_YX - np.matmul(np.matmul(q0, v0.T), C_XX)
+        C_XX = C_XX - np.matmul(np.matmul(p0, v0.T), C_XX)
         print("from iteration, C_YX =\n", C_YX)
         print("from deflation, C_YX =\n", np.matmul(Y1, X1.T) / (N - 1))
-
+        """
         # FIXME: maybe it's better to just deflate samples and re-compute covariance
         # at each iteration
         C_YX = np.matmul(Y1, X1.T) / (N - 1)
         C_XX = np.matmul(X1, X1.T) / (N - 1)
+        C_YY = np.matmul(Y1, Y1.T) / (N - 1)
+        C_YY_history[i] = np.trace(C_YY) / C_YY_init_trace
+        C_XX_history[i] = np.trace(C_XX) / C_XX_init_trace
+        #print(f"iteration {i}")
+        #print(f"  tr(C_YY) = {np.trace(C_YY)}")
+        #print(f"  tr(C_XX) = {np.trace(C_XX)}")
 
-    return (v, p, q, C_YX_history * 100, C_XX_history * 100)
+
+    return (v, p, q, C_YY_history * 100, C_XX_history * 100)
 
 
 def compress(X_raw, v, p, M_star):
@@ -203,7 +212,7 @@ if (__name__ == "__main__"):
 
     # NOTE: No normalization
     print("Running PLSR decomposition")
-    (v, p, q, C_YX_history, C_XX_history) = decompose(X, Y, 3)
+    (v, p, q, C_YY_history, C_XX_history) = decompose(X, Y, 3)
 
     M_star = 1
     print("Running PLSR compression")
@@ -238,7 +247,7 @@ if (__name__ == "__main__"):
 
     plt.figure()
     plt.plot(C_XX_history, "x-")
-    plt.plot(C_YX_history, "o-")
+    plt.plot(C_YY_history, "o-")
     plt.legend(["input", "output"])
     plt.xlabel("component ID")
     plt.ylabel("residual var (%)")
