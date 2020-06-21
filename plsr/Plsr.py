@@ -54,7 +54,7 @@ def decompose(X_raw, Y_raw, M_star):
         v0 = v0.reshape(-1, 1)
 
         # 1-by-N, input score
-        z0 = np.matmul(v0.T, X).reshape(1, -1)
+        z0 = np.matmul(v0.T, X1).reshape(1, -1)
 
         # 1-by-1, common denominator
         D = np.matmul(v0.T, np.matmul(C_XX, v0))
