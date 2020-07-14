@@ -5,6 +5,9 @@ import  Plsr
 import pickle
 from pyquaternion import Quaternion
 
+ACCEL_RANGE = 8 * 9.80665 # m/s^2
+GYRO_RANGE = 2000 / 180.0 * 3.1415926 # rad/s
+
 def loadData(folder):
     inputFilename = os.path.join(folder, "result.csv")
     outputFilename = os.path.join(folder, "groundTruth.csv")
@@ -56,19 +59,19 @@ def assembleInputOutput1(sampleTime, orientation, angularVelInDevice, linearAccI
 
     channelsPerSample = 10 # orientation, angularVelInDevice, linearAccInDevice
 
-    # converting gravity-removed linear acceleration into device ref frame
+    # NOTE: converting gravity-removed linear acceleration into device ref frame
     # seems to give slightly worse approximation
-    # linearAccInWorld RMSE = 0.1166, 0.1042, 0.0846
-    # linearAccInDevice RMSE = 0.1592, 0.1247, 0.1339
-    linearAccInDevice = np.array(
-            [Quaternion(orientation[i, :]).inverse.rotate(linearAccInWorld[i])
-                for i in range(len(sampleTime))]) # xyz, gravity-removed
+    #   * linearAccInWorld: pos RMSE = 0.0105, 0.0219. 0.0241
+    #   * linearAccInDevice: pos RMSE = 0.0106, 0.0219, 0.0242
+    #linearAccInDevice = np.array(
+    #        [Quaternion(orientation[i, :]).inverse.rotate(linearAccInWorld[i])
+    #            for i in range(len(sampleTime))]) # xyz, gravity-removed
 
     # horizontally concatenate input channels
     input = np.zeros((len(sampleTime), 10))
     input[:, 0:4] = orientation
     input[:, 4:7] = angularVelInDevice
-    input[:, 7:10] = linearAccInWorld #linearAccInDevice
+    input[:, 7:10] = linearAccInWorld
 
     # all samples in a window
     N = len(sampleTime) - subsamplingRatio * (windowSize - 1)
@@ -85,14 +88,15 @@ def assembleInputOutput1(sampleTime, orientation, angularVelInDevice, linearAccI
     return (X, Y, t)
 
 
-if (__name__ == "__main__"):
-    folder = "watch-tracking"
-    pklFilename = "data.pkl"
-    resultFilename = "attempt2.csv"
-
+def prepareInputOutput(folder, pklFilename):
     (sampleTime, orientation, angularVelInDevice, linearAccInWorld, position) = loadData(folder)
-    (angularVelInDevice, _, _) = normalize(angularVelInDevice)
-    (linearAccInWorld, _, _) = normalize(linearAccInWorld)
+
+    # NOTE: we're not "normalizing" angularVelInDevice and linearAccInWorld because
+    # that would remove sensor bias, which is not realistic. Instead we just "scale"
+    # it so that the corresponding ranges are [-1.0, 1.0]
+    angularVelInDevice = angularVelInDevice / ACCEL_RANGE
+    linearAccInWorld = linearAccInWorld / GYRO_RANGE
+    # FIXME: we should probably just "scale" position similar to above
     (position, posAvg, posStd) = normalize(position)
 
     (X, Y, t) = assembleInputOutput1(
@@ -106,34 +110,57 @@ if (__name__ == "__main__"):
         (X, Y, t) = pickle.load(f)
     """
 
+    return (X, Y, t, sampleTime, orientation, position, posAvg, posStd)
+
+
+if (__name__ == "__main__"):
+    trainingFolder = "watch-simulation-bias-0_02" # bias in X
+    testingFolder = "watch-simulation-bias-0_1" # bias in Z
+
     M_star = 10
+    pklFilename = "data.pkl"
+    resultFilename = "attempt1.csv"
+
+    # Training
+    print(f"Training with {M_star} components using data in {trainingFolder}")
+    (X, Y, t, sampleTime, orientation, position, posAvg, posStd) = prepareInputOutput(trainingFolder, pklFilename)
     (v, p, q, C_YY_history, C_XX_history) = Plsr.decompose(X.T, Y.T, M_star)
     print(f"Input residual covar = {C_XX_history[-1]}")
     print(f"Output residual covar = {C_YY_history[-1]}")
 
+    # Testing
+    print(f"Testing with {M_star} components using data in {testingFolder}")
+    (X, Y, t, sampleTime, orientation, position, posAvgTesting, posStdTesting) = \
+            prepareInputOutput(testingFolder, pklFilename)
+
     Y_predicted = Plsr.predict(X.T, v, p, q, M_star)
     Y_predicted = Y_predicted.T
 
-    Y_error = Y - Y_predicted
-    rmse = np.sqrt(np.mean(np.multiply(Y_error, Y_error), axis=0))
-    print(f"Prediction RMSE = {rmse}")
-    print(f"Prediction max error = {np.max(np.abs(Y_error), axis=0)}")
+    # Recover trajectories
+    predictedPos = denormalize(Y_predicted, posAvg, posStd)
+    originalPos = denormalize(position, posAvgTesting, posStdTesting)
+    interpolatedOriginalPos = np.zeros(predictedPos.shape)
+    for i in range(3):
+        interpolatedOriginalPos[:, i] = np.interp(t, sampleTime, originalPos[:, i]) # xyz
 
+    # Compute simple metrics
+    posError = interpolatedOriginalPos - predictedPos
+    rmse = np.sqrt(np.mean(np.multiply(posError, posError), axis=0))
+    print(f"Prediction RMSE = {rmse}")
+    print(f"Prediction max error = {np.max(np.abs(posError), axis=0)}")
+
+    # Output predicted trajectory
     with open(resultFilename, "w") as f:
         print(f"Saving predicted trajectory to {resultFilename}")
         # t, px, py, pz, qw, qx, qy, qz
         output = np.zeros((len(t), 8))
         output[:, 0] = t * 1e9 # s -> ns
-        output[:, 1:4] = denormalize(Y_predicted, posAvg, posStd)
-        print(sampleTime.shape)
-        print(orientation.shape)
-        print(t.shape)
+        output[:, 1:4] = predictedPos
         for i in range(4):
             output[:, 4 + i] = np.interp(t, sampleTime, orientation[:, i])
         np.savetxt(resultFilename, output, fmt="%.4f")
 
-
-
+    # Plotting
     plt.figure()
     plt.plot(C_YY_history, "o-", label="C_YY")
     plt.plot(C_XX_history, "x-", label="C_XX")
@@ -145,12 +172,11 @@ if (__name__ == "__main__"):
     plt.figure()
     for i in range(3):
         plt.subplot(3, 1, i+1)
-        plt.plot(t, Y_predicted[:, i], "-", label="prediction")
-        plt.plot(t, Y[:, i], ".", label="ground truth")
+        plt.plot(sampleTime, originalPos[:, i], "-", label="gt")
+        plt.plot(t, predictedPos[:, i], "-", label="prediction")
         plt.ylabel(("X", "Y", "Z")[i])
         plt.legend()
-    plt.suptitle(f"prediction using {M_star} components")
+    plt.suptitle(f"Predicted trajectory using {M_star} components")
 
     plt.show()
-
 
