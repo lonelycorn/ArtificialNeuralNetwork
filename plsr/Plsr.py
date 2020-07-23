@@ -32,9 +32,11 @@ def decompose(X_raw, Y_raw, M_star):
     # loading for input
     p = np.zeros((M, M_star))
 
-    # residual information after using first [0..k] latent variables
-    C_YY_history = np.zeros(M_star)
-    C_XX_history = np.zeros(M_star)
+    # residual information after using first k latent variables
+    C_YY_history = np.zeros(M_star + 1)
+    C_XX_history = np.zeros(M_star + 1)
+    C_YY_history[0] = 1.0
+    C_XX_history[0] = 1.0
     C_YY_init_trace = np.trace(C_YY)
     C_XX_init_trace = np.trace(C_XX)
     #print(f"initial tr(C_YY) = {C_YY_init_trace}")
@@ -104,8 +106,8 @@ def decompose(X_raw, Y_raw, M_star):
         C_YX = np.matmul(Y1, X1.T) / (N - 1)
         C_XX = np.matmul(X1, X1.T) / (N - 1)
         C_YY = np.matmul(Y1, Y1.T) / (N - 1)
-        C_YY_history[i] = np.trace(C_YY) / C_YY_init_trace
-        C_XX_history[i] = np.trace(C_XX) / C_XX_init_trace
+        C_YY_history[i + 1] = np.trace(C_YY) / C_YY_init_trace
+        C_XX_history[i + 1] = np.trace(C_XX) / C_XX_init_trace
         #print(f"iteration {i}")
         #print(f"  tr(C_YY) = {np.trace(C_YY)}")
         #print(f"  tr(C_XX) = {np.trace(C_XX)}")
